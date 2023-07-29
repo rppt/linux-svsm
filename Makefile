@@ -33,7 +33,7 @@ LDS_FLAGS	:= -DSVSM_GPA_LDS="$(SVSM_GPA)"
 LDS_FLAGS	+= -DSVSM_GPA="$(SVSM_GPA)ULL"
 LDS_FLAGS	+= -DSVSM_MEM="$(SVSM_MEM)ULL"
 
-.PHONY: all doc prereq clean superclean
+.PHONY: all doc prereq clean superclean external_libs
 
 STATIC_LIBS	+= ./external/build/lib/libtpm.a
 STATIC_LIBS	+= ./external/build/lib/libplatform.a
@@ -49,7 +49,7 @@ doc: .prereq
 svsm.bin: svsm.bin.elf
 	objcopy -g -O binary $< $@
 
-svsm.bin.elf: $(OBJS) src/start/svsm.lds
+svsm.bin.elf: $(OBJS) src/start/svsm.lds external_libs
 	@xargo build --features $(FEATURES)
 	$(GCC) $(LD_FLAGS) -o $@ $(OBJS) -Wl,--start-group $(STATIC_LIBS) -Wl,--end-group
 
@@ -74,13 +74,18 @@ prereq: .prereq
 	rustup override set nightly
 	cargo install xargo
 	cargo install bootimage
+	make -C external prereq
 	touch .prereq
 
 clean:
-	@xargo clean 
+	@xargo clean
 	rm -f svsm.bin svsm.bin.elf $(OBJS) $(STATIC_LIBS)
 	rm -rf $(TARGET_DIR)
 	rm -f src/start/svsm.lds
 
 superclean: clean
 	rm -f .prereq
+
+.PHONY: external_libs
+external_libs: $(STATIC_LIBS)
+	make -C external
